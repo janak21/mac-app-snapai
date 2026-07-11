@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapAI Local UI</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <main class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">SnapAI</p>
+          <h1>Local UI MVP</h1>
+          <p class="subtitle">Prompt, preview, generate, and manage profiles from one local screen.</p>
+        </div>
+        <div class="header-actions">
+          <button id="refresh-all-btn" class="btn btn-subtle" type="button">Refresh all</button>
+        </div>
+      </header>
+
+      <div id="global-status" class="status status-info" role="status" aria-live="polite">
+        UI initialized.
+      </div>
+
+      <nav class="tabs" aria-label="Main sections">
+        <button class="tab is-active" data-tab="setup" type="button">Setup</button>
+        <button class="tab" data-tab="create" type="button">Create</button>
+        <button class="tab" data-tab="results" type="button">Results</button>
+        <button class="tab" data-tab="history" type="button">History</button>
+        <button class="tab" data-tab="settings" type="button">Settings</button>
+      </nav>
+
+      <section id="tab-setup" class="panel is-active" data-panel="setup">
+        <div class="grid two-col">
+          <article class="card">
+            <h2>API Health</h2>
+            <p class="muted">Confirm local backend reachability.</p>
+            <div class="row">
+              <button id="health-check-btn" class="btn" type="button">Check health</button>
+              <span id="health-pill" class="pill">Unknown</span>
+            </div>
+            <pre id="health-json" class="code-box">{}</pre>
+          </article>
+
+          <article class="card">
+            <h2>Config</h2>
+            <p class="muted">Set API keys here and verify whether providers are configured.</p>
+            <div class="grid two-col">
+              <div>
+                <label for="openai-key-input" class="label">OpenAI API key</label>
+                <input id="openai-key-input" class="input" type="password" placeholder="sk-..." />
+              </div>
+              <div>
+                <label for="gemini-key-input" class="label">Gemini API key</label>
+                <input id="gemini-key-input" class="input" type="password" placeholder="AIza..." />
+              </div>
+            </div>
+            <div class="row wrap">
+              <button id="save-keys-btn" class="btn btn-accent" type="button">Save API keys</button>
+              <button id="config-load-btn" class="btn" type="button">Load config</button>
+              <button id="config-save-btn" class="btn" type="button">Save config JSON</button>
+            </div>
+            <div class="row wrap">
+              <span id="openai-status-pill" class="pill">OpenAI: unknown</span>
+              <span id="gemini-status-pill" class="pill">Gemini: unknown</span>
+            </div>
+            <label for="config-json" class="label">Config JSON</label>
+            <textarea id="config-json" class="input mono" rows="10" spellcheck="false">{}</textarea>
+          </article>
+        </div>
+      </section>
+
+      <section id="tab-create" class="panel" data-panel="create" hidden>
+        <div class="grid two-col">
+          <article class="card span-all">
+            <h2>Create</h2>
+            <p class="muted">Build prompt inputs, preview final prompt, and generate outputs.</p>
+
+            <label for="prompt-input" class="label">Prompt</label>
+            <textarea
+              id="prompt-input"
+              class="input"
+              rows="5"
+              placeholder="Example: camera app icon, modern geometric lens, subtle gradient"
+            ></textarea>
+
+            <div class="grid three-col">
+              <div>
+                <label for="style-input" class="label">Style <button class="help-text" type="button" data-help="Optional rendering style hint. Example: minimalism, glassy, neon." aria-label="Help for style">?</button></label>
+                <input id="style-input" class="input" type="text" placeholder="Optional style" />
+              </div>
+              <div>
+                <label for="count-input" class="label">Count <button class="help-text" type="button" data-help="How many images to generate. Banana non-pro supports only 1." aria-label="Help for count">?</button></label>
+                <input id="count-input" class="input" type="number" min="1" max="10" value="1" />
+              </div>
+              <div>
+                <label for="format-input" class="label">Format <button class="help-text" type="button" data-help="Image file format for OpenAI output." aria-label="Help for format">?</button></label>
+                <select id="format-input" class="input">
+                  <option value="png">png</option>
+                  <option value="webp">webp</option>
+                  <option value="jpeg">jpeg</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid two-col">
+              <label class="check">
+                <input id="raw-prompt-input" type="checkbox" />
+                <span>Use raw prompt <button class="help-text" type="button" data-help="Sends your prompt without SnapAI prompt enhancement." aria-label="Help for raw prompt">?</button></span>
+              </label>
+              <label class="check">
+                <input id="icon-words-input" type="checkbox" checked />
+                <span>Use icon words <button class="help-text" type="button" data-help="Allows words like icon/logo in enhancement. Can increase padding in outputs." aria-label="Help for icon words">?</button></span>
+              </label>
+            </div>
+
+            <div class="grid two-col">
+              <div>
+                <label for="profile-select" class="label">Profile <button class="help-text" type="button" data-help="Applies saved option presets from the selected profile." aria-label="Help for profile">?</button></label>
+                <select id="profile-select" class="input">
+                  <option value="">No profile</option>
+                </select>
+              </div>
+              <div>
+                <label for="model-input" class="label">Model <button class="help-text" type="button" data-help="Generation provider model. banana uses Gemini image models." aria-label="Help for model">?</button></label>
+                <select id="model-input" class="input">
+                  <option value="gpt-1.5">gpt-1.5</option>
+                  <option value="gpt-1">gpt-1</option>
+                  <option value="banana">banana</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid three-col">
+              <div>
+                <label for="quality-input" class="label">Quality <button class="help-text" type="button" data-help="OpenAI: auto/high/medium/low. Banana pro: 1k/2k/4k." aria-label="Help for quality">?</button></label>
+                <input id="quality-input" class="input" type="text" placeholder="auto / high / 1k / 2k / 4k" />
+              </div>
+              <div>
+                <label for="background-input" class="label">Background <button class="help-text" type="button" data-help="OpenAI only: transparent, opaque, or auto." aria-label="Help for background">?</button></label>
+                <select id="background-input" class="input">
+                  <option value="auto">auto</option>
+                  <option value="transparent">transparent</option>
+                  <option value="opaque">opaque</option>
+                </select>
+              </div>
+              <div>
+                <label for="output-input" class="label">Output folder <button class="help-text" type="button" data-help="Directory where generated images are written." aria-label="Help for output folder">?</button></label>
+                <input id="output-input" class="input" type="text" placeholder="./assets" />
+              </div>
+            </div>
+            <div class="grid two-col">
+              <div>
+                <label for="file-name-input" class="label">File name <button class="help-text" type="button" data-help="Optional base file name. Example: app-icon. Extensions and indexes are added automatically." aria-label="Help for file name">?</button></label>
+                <input id="file-name-input" class="input" type="text" placeholder="app-icon" />
+              </div>
+              <div class="loading-slot">
+                <div id="generate-loading" class="loading-indicator" hidden>
+                  <span class="spinner"></span>
+                  <span id="generate-loading-text">Generating icon...</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row wrap">
+              <button id="prompt-preview-btn" class="btn" type="button">Preview prompt</button>
+              <button id="generate-btn" class="btn btn-accent" type="button">Generate</button>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Prompt Preview</h3>
+            <pre id="prompt-preview-output" class="code-box">No preview yet.</pre>
+          </article>
+
+          <article class="card">
+            <h3>Generate Response</h3>
+            <pre id="generate-output" class="code-box">No generation yet.</pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="tab-results" class="panel" data-panel="results" hidden>
+        <article class="card">
+          <div class="row spread">
+            <div>
+              <h2>Results</h2>
+              <p class="muted">Latest generated images and metadata.</p>
+            </div>
+            <button id="clear-results-btn" class="btn btn-subtle" type="button">Clear local results</button>
+          </div>
+          <div id="results-grid" class="results-grid"></div>
+        </article>
+      </section>
+
+      <section id="tab-history" class="panel" data-panel="history" hidden>
+        <article class="card">
+          <div class="row spread wrap">
+            <div>
+              <h2>History</h2>
+              <p class="muted">Inspect generation history from the backend.</p>
+            </div>
+            <div class="row wrap">
+              <button id="history-load-btn" class="btn" type="button">Load history</button>
+              <button id="history-clear-btn" class="btn btn-danger" type="button">Clear history</button>
+            </div>
+          </div>
+          <div id="history-list" class="stack"></div>
+        </article>
+      </section>
+
+      <section id="tab-settings" class="panel" data-panel="settings" hidden>
+        <article class="card">
+          <div class="row spread wrap">
+            <div>
+              <h2>Profiles</h2>
+              <p class="muted">Manage prompt/generation profiles and activate one.</p>
+            </div>
+            <button id="profiles-load-btn" class="btn" type="button">Load profiles</button>
+          </div>
+
+          <div class="grid two-col">
+            <div>
+              <label for="new-profile-name" class="label">New profile name</label>
+              <input id="new-profile-name" class="input" type="text" placeholder="Studio profile" />
+            </div>
+            <div>
+              <label for="new-profile-json" class="label">Profile JSON</label>
+              <textarea id="new-profile-json" class="input mono" rows="6" spellcheck="false">{}</textarea>
+            </div>
+          </div>
+
+          <div class="row wrap">
+            <button id="profile-create-btn" class="btn btn-accent" type="button">Create profile</button>
+          </div>
+
+          <div id="profiles-list" class="stack"></div>
+        </article>
+      </section>
+    </main>
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

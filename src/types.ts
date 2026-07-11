@@ -2,6 +2,10 @@ export interface ConfigData {
   openai_api_key?: string;
   google_api_key?: string;
   default_output_path?: string;
+  defaults?: UiGenerationDefaults;
+  active_profile_id?: string;
+  ux_flags?: Record<string, boolean>;
+  ui_settings?: UiSettings;
 }
 
 export interface IconGenerationOptions {
@@ -26,4 +30,51 @@ export interface OpenAIResponse {
     url: string;
     revised_prompt?: string;
   }>;
+}
+
+export type UiModelAlias = "gpt-1.5" | "gpt-1" | "gpt" | "banana";
+export type UiProvider = "openai" | "banana";
+export type UiOpenAIQuality = "auto" | "high" | "medium" | "low" | "hd" | "standard";
+export type UiBananaQuality = "1k" | "2k" | "4k";
+export type UiQuality = UiOpenAIQuality | UiBananaQuality;
+
+export interface UiGenerationDefaults {
+  output?: string;
+  fileName?: string;
+  model?: UiModelAlias;
+  quality?: UiQuality;
+  background?: "transparent" | "opaque" | "auto";
+  outputFormat?: "png" | "jpeg" | "webp";
+  moderation?: "low" | "auto";
+  rawPrompt?: boolean;
+  style?: string;
+  useIconWords?: boolean;
+  pro?: boolean;
+  n?: number;
+}
+
+export interface UiSettings {
+  autoOpenBrowser?: boolean;
+  costWarningThreshold?: number;
+}
+
+export interface UiProfile {
+  id: string;
+  name: string;
+  description?: string;
+  options: UiGenerationDefaults;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UiHistoryEntry {
+  id: string;
+  createdAt: string;
+  prompt: string;
+  finalPrompt: string;
+  provider: UiProvider;
+  model: UiModelAlias;
+  options: UiGenerationDefaults;
+  outputPaths: string[];
+  profileId?: string;
 }
