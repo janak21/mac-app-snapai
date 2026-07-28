@@ -111,6 +111,20 @@ node bin/dev.js icon --prompt "friendly weather symbol" --model banana-2 --think
 node bin/dev.js icon --prompt "calculator symbol" --style minimalism --prompt-only
 ```
 
+## Prompt ideas and visual styles
+
+The native Mac app includes a **Templates** button beside the prompt editor. It inserts starting points from the same examples and style vocabulary used by the shared prompt builder. You can edit the inserted text freely.
+
+Useful starting prompts:
+
+- `weather app with simple sun and cloud shapes` — `minimalism`
+- `secure finance app with a bold shield and subtle checkmark` — `material`
+- `music player app with abstract sound waves and simple shapes` — `gradient`
+- `note-taking app with a pen and paper, minimal and friendly` — `clay`
+- `camera app with a lens built from clean concentric circles` — `geometric`
+
+Available style names include `minimalism`, `glassy`, `geometric`, `gradient`, `material`, `pixel`, `kawaii`, and `holographic`, along with the other presets in `src/utils/styleTemplates.ts`.
+
 All generated CLI images are square `1024x1024` outputs. Use `node bin/dev.js icon --help` for the full flag reference.
 
 ## Development

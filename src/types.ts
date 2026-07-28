@@ -32,7 +32,14 @@ export interface OpenAIResponse {
   }>;
 }
 
-export type UiModelAlias = "gpt-1.5" | "gpt-1" | "gpt" | "banana";
+export type UiModelAlias =
+  | "gpt-1.5"
+  | "gpt-1"
+  | "gpt-image-2"
+  | "gpt"
+  | "banana"
+  | "banana-2"
+  | "banana-pro";
 export type UiProvider = "openai" | "banana";
 export type UiOpenAIQuality = "auto" | "high" | "medium" | "low" | "hd" | "standard";
 export type UiBananaQuality = "1k" | "2k" | "4k";
@@ -51,6 +58,7 @@ export interface UiGenerationDefaults {
   useIconWords?: boolean;
   pro?: boolean;
   n?: number;
+  thinking?: "minimal" | "max";
 }
 
 export interface UiSettings {

@@ -32,11 +32,15 @@ export default class UiCommand extends Command {
       description: "Do not open the browser automatically",
       default: false,
     }),
+    token: Flags.string({
+      description: "Require this bearer token for local API requests",
+      hidden: true,
+    }),
   };
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(UiCommand);
-    const server = await startUiServer({ port: flags.port });
+    const server = await startUiServer({ port: flags.port, authToken: flags.token });
     const url = `http://127.0.0.1:${server.port}`;
 
     this.log(`SnapAI UI running at ${url}`);

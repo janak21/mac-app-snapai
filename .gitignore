@@ -8,6 +8,11 @@ dist/
 bundle/
 *.tgz
 
+# Swift / Xcode build outputs
+.build/
+DerivedData/
+macos/SnapAIApp/SnapAI.app/
+
 # Environment variables
 .env
 .env.local
@@ -193,3 +198,6 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Codebase memory index (local tooling)
+.codebase-memory/

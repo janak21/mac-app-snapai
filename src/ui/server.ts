@@ -12,6 +12,7 @@ import { type ConfigData, type UiGenerationDefaults } from "../types.js";
 
 export interface StartUiServerOptions {
   port: number;
+  authToken?: string;
 }
 
 export interface UiServerHandle {
@@ -40,6 +41,12 @@ interface GeneratePayload {
   prompt?: unknown;
   options?: unknown;
   profileId?: unknown;
+  credentials?: unknown;
+}
+
+interface GenerationCredentials {
+  openai?: string;
+  google?: string;
 }
 
 interface CreateProfilePayload {
@@ -147,6 +154,31 @@ function normalizeOptionsInput(value: unknown, fieldName: string): UiGenerationD
   }
   const object = assertPlainObject(value, fieldName);
   return object as UiGenerationDefaults;
+}
+
+function normalizeCredentialsInput(value: unknown): GenerationCredentials | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const object = assertPlainObject(value, "credentials");
+  const credentials: GenerationCredentials = {};
+
+  for (const [key, field] of [["openai", "credentials.openai"], ["google", "credentials.google"]] as const) {
+    const raw = object[key];
+    if (raw === undefined) {
+      continue;
+    }
+    if (typeof raw !== "string") {
+      throw new HttpError(400, `Field "${field}" must be a string.`);
+    }
+    const trimmed = raw.trim();
+    if (trimmed) {
+      credentials[key] = trimmed;
+    }
+  }
+
+  return credentials;
 }
 
 function validateProfileName(name: unknown): string {
@@ -482,7 +514,7 @@ async function serveStatic(
 }
 
 export async function startUiServer(options: StartUiServerOptions): Promise<UiServerHandle> {
-  const { port } = options;
+  const { port, authToken } = options;
   const staticDir = await resolveStaticDirectory();
 
   const server = createServer(async (req, res) => {
@@ -490,6 +522,14 @@ export async function startUiServer(options: StartUiServerOptions): Promise<UiSe
       const method = req.method ?? "GET";
       const requestUrl = new URL(req.url ?? "/", "http://127.0.0.1");
       const pathname = requestUrl.pathname;
+
+      if (authToken && pathname.startsWith("/api/")) {
+        const authorization = req.headers.authorization;
+        if (authorization !== `Bearer ${authToken}`) {
+          sendJson(res, 401, { error: "Unauthorized" });
+          return;
+        }
+      }
 
       if ((method === "GET" || method === "HEAD") && !pathname.startsWith("/api/") && staticDir) {
         const served = await serveStatic(res, staticDir, pathname);
@@ -665,6 +705,8 @@ export async function startUiServer(options: StartUiServerOptions): Promise<UiSe
           return;
         }
 
+        const credentials = normalizeCredentialsInput(body.credentials);
+
         const activeProfile =
           typeof config.active_profile_id === "string"
             ? profiles.find((profile) => profile.id === config.active_profile_id) ?? null
@@ -680,6 +722,7 @@ export async function startUiServer(options: StartUiServerOptions): Promise<UiSe
         const result = await GenerationService.generate({
           prompt,
           options: mergedOptions,
+          credentials,
         });
 
         const historyEntry = await HistoryService.append({
@@ -708,7 +751,15 @@ export async function startUiServer(options: StartUiServerOptions): Promise<UiSe
 
       const fileMatch = pathname.match(/^\/api\/files\/(.+)$/);
       if (fileMatch && method === "GET") {
-        const absolutePath = decodeURIComponent(fileMatch[1]);
+        const absolutePath = path.resolve(decodeURIComponent(fileMatch[1]));
+        const history = await HistoryService.list();
+        const isKnownOutput = history.some((entry) =>
+          entry.outputPaths.some((outputPath) => path.resolve(outputPath) === absolutePath)
+        );
+        if (!isKnownOutput) {
+          sendJson(res, 404, { error: "File not found" });
+          return;
+        }
         const fileStats = await stat(absolutePath);
         if (!fileStats.isFile()) {
           sendJson(res, 404, { error: "File not found" });

@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, rename, unlink, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { ConfigService } from "./config.js";
 import { GeminiService } from "./gemini.js";
@@ -10,6 +11,10 @@ import { type UiGenerationDefaults, type UiModelAlias, type UiProvider } from ".
 export interface GenerationRequest {
   prompt: string;
   options?: UiGenerationDefaults;
+  credentials?: {
+    openai?: string;
+    google?: string;
+  };
 }
 
 export interface GenerationResult {
@@ -22,7 +27,7 @@ export interface GenerationResult {
 
 interface ResolvedOpenAIOptions {
   output: string;
-  model: "gpt-1" | "gpt-1.5";
+  model: "gpt-1" | "gpt-1.5" | "gpt-image-2";
   quality: "auto" | "high" | "medium" | "low";
   background: "transparent" | "opaque" | "auto";
   outputFormat: "png" | "jpeg" | "webp";
@@ -35,19 +40,29 @@ interface ResolvedBananaOptions {
   quality: "1k" | "2k" | "4k";
   pro: boolean;
   n: number;
+  modelVariant: "banana" | "banana-2";
 }
 
 function normalizeModel(model?: string): UiModelAlias {
   const normalized = String(model ?? "gpt-1.5").trim().toLowerCase();
   if (normalized === "gpt") return "gpt-1.5";
-  if (normalized === "gpt-1" || normalized === "gpt-1.5" || normalized === "banana") {
+  if (
+    normalized === "gpt-1" ||
+    normalized === "gpt-1.5" ||
+    normalized === "gpt-image-2" ||
+    normalized === "banana" ||
+    normalized === "banana-2" ||
+    normalized === "banana-pro"
+  ) {
     return normalized;
   }
-  throw new Error('Invalid model. Valid values: "gpt-1.5", "gpt-1", "gpt", "banana".');
+  throw new Error(
+    'Invalid model. Valid values: "gpt-1.5", "gpt-1", "gpt-image-2", "gpt", "banana", "banana-2", "banana-pro".'
+  );
 }
 
 function resolveProvider(model: UiModelAlias): UiProvider {
-  return model === "banana" ? "banana" : "openai";
+  return model === "banana" || model === "banana-2" || model === "banana-pro" ? "banana" : "openai";
 }
 
 function resolveImageCount(input: unknown): number {
@@ -133,9 +148,9 @@ async function saveBase64Images(
           : base64DataArray.length === 1
             ? `icon-${timestamp}.${outputFormat}`
             : `icon-${timestamp}-${i + 1}.${outputFormat}`;
-    const outputPath = path.join(outputDir, filename);
+    const outputPath = await resolveAvailableOutputPath(outputDir, filename);
     const buffer = Buffer.from(base64Data, "base64");
-    await writeFile(outputPath, buffer);
+    await writeImageAtomically(outputPath, buffer);
     outputPaths.push(outputPath);
   }
 
@@ -161,13 +176,50 @@ async function saveBinaryImages(
           : images.length === 1
             ? `icon-${timestamp}.${extension}`
             : `icon-${timestamp}-${i + 1}.${extension}`;
-    const outputPath = path.join(outputDir, filename);
+    const outputPath = await resolveAvailableOutputPath(outputDir, filename);
     const buffer = Buffer.from(base64, "base64");
-    await writeFile(outputPath, buffer);
+    await writeImageAtomically(outputPath, buffer);
     outputPaths.push(outputPath);
   }
 
   return outputPaths;
+}
+
+async function resolveAvailableOutputPath(outputDir: string, filename: string): Promise<string> {
+  const parsed = path.parse(filename);
+  let candidate = path.join(outputDir, filename);
+  let suffix = 2;
+
+  while (await pathExists(candidate)) {
+    candidate = path.join(outputDir, `${parsed.name}-${suffix}${parsed.ext}`);
+    suffix += 1;
+  }
+
+  return candidate;
+}
+
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function writeImageAtomically(outputPath: string, buffer: Buffer): Promise<void> {
+  const temporaryPath = `${outputPath}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporaryPath, buffer);
+    await rename(temporaryPath, outputPath);
+  } catch (error) {
+    try {
+      await unlink(temporaryPath);
+    } catch {
+      // Best-effort cleanup; preserve the original write error.
+    }
+    throw error;
+  }
 }
 
 function sanitizeFileNameBase(input: unknown): string | undefined {
@@ -208,12 +260,15 @@ export class GenerationService {
     const sharedOutput = resolveOutputPath(options.output, config.default_output_path);
 
     if (provider === "banana") {
-      const resolved = this.resolveBananaOptions(options, sharedOutput);
+      const resolved = this.resolveBananaOptions(options, model, sharedOutput);
       const images = await GeminiService.generateBananaImages({
         prompt: finalPrompt,
         pro: resolved.pro,
         n: resolved.pro ? resolved.n : 1,
         quality: resolved.quality,
+        apiKey: request.credentials?.google,
+        modelVariant: resolved.modelVariant,
+        thinkingLevel: options.thinking,
       });
       const outputPaths = await saveBinaryImages(images, resolved.output, fileNameBase);
       return {
@@ -229,6 +284,7 @@ export class GenerationService {
           n: resolved.pro ? resolved.n : 1,
           pro: resolved.pro,
           model,
+          thinking: options.thinking,
         },
       };
     }
@@ -244,6 +300,7 @@ export class GenerationService {
       numImages: resolved.n,
       moderation: resolved.moderation,
       rawPrompt: true,
+      apiKey: request.credentials?.openai,
     });
     const outputPaths = await saveBase64Images(
       imageBase64Array,
@@ -275,8 +332,8 @@ export class GenerationService {
     model: UiModelAlias,
     output: string
   ): ResolvedOpenAIOptions {
-    if (model !== "gpt-1" && model !== "gpt-1.5") {
-      throw new Error('Invalid OpenAI model. Valid values: "gpt-1", "gpt-1.5", "gpt".');
+    if (model !== "gpt-1" && model !== "gpt-1.5" && model !== "gpt-image-2") {
+      throw new Error('Invalid OpenAI model. Valid values: "gpt-1", "gpt-1.5", "gpt-image-2", "gpt".');
     }
 
     return {
@@ -292,16 +349,27 @@ export class GenerationService {
 
   private static resolveBananaOptions(
     options: UiGenerationDefaults,
+    model: UiModelAlias,
     output: string
   ): ResolvedBananaOptions {
-    const pro = Boolean(options.pro);
+    const modelVariant = model === "banana-2" ? "banana-2" : "banana";
+    const pro = model === "banana-pro" || Boolean(options.pro);
     const quality = resolveBananaQuality(options.quality);
     const n = resolveImageCount(options.n);
 
-    if (!pro && n !== 1) {
+    if (modelVariant === "banana-2") {
+      if (n !== 1) {
+        throw new Error('Banana 2 only supports "n" = 1.');
+      }
+      if (quality !== "1k") {
+        throw new Error('Banana 2 only supports "quality" = "1k".');
+      }
+    }
+
+    if (modelVariant === "banana" && !pro && n !== 1) {
       throw new Error('Banana normal mode only supports "n" = 1.');
     }
-    if (!pro && quality !== "1k") {
+    if (modelVariant === "banana" && !pro && quality !== "1k") {
       throw new Error('Banana normal mode only supports "quality" = "1k".');
     }
 
@@ -310,6 +378,7 @@ export class GenerationService {
       quality,
       pro,
       n,
+      modelVariant,
     };
   }
 }
