@@ -98,59 +98,11 @@ struct CreateView: View {
         .overlay(alignment: .bottom) {
             ScrollEdgeFade(edge: .bottom)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            generationActionBar
-        }
-    }
-
-    private var generationActionBar: some View {
-        HStack(spacing: 12) {
-            if model.isGenerating {
-                Label("Generating artwork", systemImage: "sparkles")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-            } else {
-                Label("Saves to \(outputFolderName)", systemImage: "folder")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 12)
-
-            if model.isGenerating {
-                Button("Cancel", role: .cancel) {
-                    model.cancelGeneration()
-                }
-                .buttonStyle(.bordered)
-                .accessibilityHint("Cancels the current generation and keeps your prompt and options")
-            } else {
-                Button {
-                    requestGeneration()
-                } label: {
-                    Label("Generate Artwork", systemImage: "sparkles")
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!canRequestGeneration)
-                .accessibilityHint("Generates artwork from the current prompt and settings")
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .background(.bar)
-        .overlay(alignment: .top) {
-            Divider()
-        }
     }
 
     private var canRequestGeneration: Bool {
         let prompt = model.draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         return !model.isGenerating && !prompt.isEmpty && prompt.count <= 1000
-    }
-
-    private var outputFolderName: String {
-        (model.draft.outputFolder ?? model.outputFolder)?.lastPathComponent ?? "selected folder"
     }
 
     private func requestGeneration() {
@@ -409,6 +361,30 @@ struct CreateView: View {
                     }
                     .buttonStyle(.bordered)
                     .help("Insert a prompt idea or visual style from the built-in catalog")
+
+                    Button {
+                        requestGeneration()
+                    } label: {
+                        HStack(spacing: 6) {
+                            if model.isGenerating {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "sparkles")
+                            }
+                            Text(model.isGenerating ? "Generating" : "Generate")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .foregroundStyle(.white)
+                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(DeckTileButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canRequestGeneration)
+                    .accessibilityLabel(model.isGenerating ? "Generating artwork" : "Generate artwork")
+                    .accessibilityHint("Generates artwork from the current prompt and settings")
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
