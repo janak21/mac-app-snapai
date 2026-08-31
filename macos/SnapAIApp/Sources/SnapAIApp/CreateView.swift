@@ -366,11 +366,19 @@ struct CreateView: View {
                         requestGeneration()
                     } label: {
                         HStack(spacing: 6) {
-                            if model.isGenerating {
-                                ProgressView()
-                                    .controlSize(.small)
+                            if #available(macOS 15.0, *) {
+                                Image(systemName: "sparkles")
+                                    .symbolEffect(
+                                        .variableColor.iterative.dimInactiveLayers.nonReversing,
+                                        options: .repeat(.continuous),
+                                        isActive: model.isGenerating
+                                    )
                             } else {
                                 Image(systemName: "sparkles")
+                                    .symbolEffect(
+                                        .variableColor.iterative.dimInactiveLayers.nonReversing,
+                                        value: model.isGenerating
+                                    )
                             }
                             Text(model.isGenerating ? "Generating" : "Generate")
                         }
