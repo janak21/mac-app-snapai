@@ -63,31 +63,6 @@ struct CreateView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle("Create")
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                if model.isGenerating {
-                    Button("Cancel", role: .cancel) {
-                        model.cancelGeneration()
-                    }
-                    .buttonStyle(.bordered)
-                } else {
-                    Button {
-                        requestGeneration()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "sparkles")
-                            Text("Generate")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!canRequestGeneration)
-                    .help("Generate artwork")
-                    .accessibilityLabel("Generate artwork")
-                    .accessibilityHint("Generates artwork from the current prompt and settings")
-                }
-            }
-        }
         .onChange(of: model.results.count) { _, _ in
             selectedResultID = model.results.first?.id
         }
@@ -130,10 +105,12 @@ struct CreateView: View {
 
     private var generationActionBar: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(model.isGenerating ? "Generation in progress" : "Ready to generate")
-                    .font(.subheadline.weight(.semibold))
-                Text(model.isGenerating ? "You can keep refining the next direction while this run finishes." : "Your artwork will be saved to the selected folder.")
+            if model.isGenerating {
+                Label("Generating artwork", systemImage: "sparkles")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            } else {
+                Label("Saves to \(outputFolderName)", systemImage: "folder")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -154,6 +131,7 @@ struct CreateView: View {
                     Label("Generate Artwork", systemImage: "sparkles")
                 }
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
                 .disabled(!canRequestGeneration)
                 .accessibilityHint("Generates artwork from the current prompt and settings")
             }
@@ -169,6 +147,10 @@ struct CreateView: View {
     private var canRequestGeneration: Bool {
         let prompt = model.draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         return !model.isGenerating && !prompt.isEmpty && prompt.count <= 1000
+    }
+
+    private var outputFolderName: String {
+        (model.draft.outputFolder ?? model.outputFolder)?.lastPathComponent ?? "selected folder"
     }
 
     private func requestGeneration() {
@@ -684,15 +666,6 @@ struct CreateView: View {
                         .padding(.top, 12)
                     }
 
-                    GlowButton(
-                        title: model.isGenerating ? "Generating..." : "Generate Artwork",
-                        icon: "sparkles",
-                        isGenerating: model.isGenerating
-                    ) {
-                        requestGeneration()
-                    }
-                    .disabled(!canRequestGeneration)
-                    .padding(.top, 6)
                 }
             }
         }
