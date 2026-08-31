@@ -4,6 +4,8 @@ struct SettingsView: View {
     @ObservedObject var model: AppModel
     @State private var openAIKey = ""
     @State private var geminiKey = ""
+    @State private var isReplacingOpenAIKey = false
+    @State private var isReplacingGeminiKey = false
 
     var body: some View {
         Form {
@@ -36,6 +38,7 @@ struct SettingsView: View {
                     placeholder: "sk-…",
                     isConfigured: model.openAIConfigured,
                     value: $openAIKey,
+                    isReplacing: $isReplacingOpenAIKey,
                     account: "openai-api-key"
                 )
                 credentialRow(
@@ -43,6 +46,7 @@ struct SettingsView: View {
                     placeholder: "AIza…",
                     isConfigured: model.geminiConfigured,
                     value: $geminiKey,
+                    isReplacing: $isReplacingGeminiKey,
                     account: "google-api-key"
                 )
 
@@ -111,6 +115,7 @@ struct SettingsView: View {
         placeholder: String,
         isConfigured: Bool,
         value: Binding<String>,
+        isReplacing: Binding<Bool>,
         account: String
     ) -> some View {
         HStack(alignment: .center, spacing: 12) {
@@ -118,32 +123,67 @@ struct SettingsView: View {
                 HStack(spacing: 8) {
                     Text(title)
                         .font(.headline)
-                    Label(
-                        isConfigured ? "Configured" : "Not configured",
-                        systemImage: isConfigured ? "checkmark.circle.fill" : "circle"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(isConfigured ? .green : .secondary)
+                    if isConfigured && !isReplacing.wrappedValue {
+                        Label("Configured in Keychain", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    } else {
+                        Label("Not configured", systemImage: "circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
-                SecureField(placeholder, text: value)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 360)
+                if isConfigured && !isReplacing.wrappedValue {
+                    Label("Your key is stored securely in Keychain.", systemImage: "key.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("API key stored securely in Keychain")
+                } else {
+                    SecureField(isConfigured ? "Enter replacement key" : placeholder, text: value)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 360)
+                        .accessibilityLabel(isConfigured ? "Replacement \(title) API key" : "\(title) API key")
+                }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 8) {
-                Button("Save") {
-                    model.saveProviderKey(value.wrappedValue, account: account)
-                    value.wrappedValue = ""
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(value.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
                 if isConfigured {
+                    if isReplacing.wrappedValue {
+                        Button("Save Replacement") {
+                            model.saveProviderKey(value.wrappedValue, account: account)
+                            value.wrappedValue = ""
+                            isReplacing.wrappedValue = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(value.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        Button("Cancel") {
+                            value.wrappedValue = ""
+                            isReplacing.wrappedValue = false
+                        }
+                        .buttonStyle(.link)
+                    } else {
+                        Button("Replace Key") {
+                            isReplacing.wrappedValue = true
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityHint("Reveals a field to replace the stored \(title) API key")
+                    }
+
                     Button("Remove", role: .destructive) {
                         model.removeProviderKey(account: account)
+                        value.wrappedValue = ""
+                        isReplacing.wrappedValue = false
                     }
                     .buttonStyle(.link)
+                } else {
+                    Button("Save") {
+                        model.saveProviderKey(value.wrappedValue, account: account)
+                        value.wrappedValue = ""
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(value.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }

@@ -102,7 +102,14 @@ struct PillTag: View {
             }
         }
         .buttonStyle(DeckTileButtonStyle())
+        .animation(selectionAnimation, value: isSelected)
     }
+
+    private var selectionAnimation: Animation {
+        reduceMotion ? .linear(duration: 0.01) : .easeOut(duration: 0.14)
+    }
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 }
 
 struct GlowButton: View {
@@ -231,10 +238,10 @@ struct DeckTileButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .scaleEffect(reduceMotion || !configuration.isPressed ? 1 : 0.985)
             .brightness(configuration.isPressed ? -0.04 : 0)
             .animation(
-                reduceMotion ? .easeInOut(duration: 0.1) : .spring(response: 0.25, dampingFraction: 0.75),
+                reduceMotion ? .linear(duration: 0.01) : .easeOut(duration: 0.12),
                 value: configuration.isPressed
             )
     }
@@ -262,4 +269,3 @@ struct ScrollEdgeFade: View {
         .allowsHitTesting(false)
     }
 }
-

@@ -72,7 +72,7 @@ struct CreateView: View {
                     .buttonStyle(.bordered)
                 } else {
                     Button {
-                        model.requestGeneration()
+                        requestGeneration()
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "sparkles")
@@ -81,13 +81,27 @@ struct CreateView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
+                    .disabled(!canRequestGeneration)
                     .help("Generate artwork")
                     .accessibilityLabel("Generate artwork")
+                    .accessibilityHint("Generates artwork from the current prompt and settings")
                 }
             }
         }
         .onChange(of: model.results.count) { _, _ in
             selectedResultID = model.results.first?.id
+        }
+        .onChange(of: model.isGenerating) { wasGenerating, isGenerating in
+            guard wasGenerating,
+                  !isGenerating,
+                  model.generationPhase == .completed,
+                  !model.results.isEmpty
+            else {
+                return
+            }
+
+            selectedResultID = model.results.first?.id
+            model.selectSection(.library)
         }
     }
 
@@ -109,6 +123,57 @@ struct CreateView: View {
         .overlay(alignment: .bottom) {
             ScrollEdgeFade(edge: .bottom)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            generationActionBar
+        }
+    }
+
+    private var generationActionBar: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.isGenerating ? "Generation in progress" : "Ready to generate")
+                    .font(.subheadline.weight(.semibold))
+                Text(model.isGenerating ? "You can keep refining the next direction while this run finishes." : "Your artwork will be saved to the selected folder.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 12)
+
+            if model.isGenerating {
+                Button("Cancel", role: .cancel) {
+                    model.cancelGeneration()
+                }
+                .buttonStyle(.bordered)
+                .accessibilityHint("Cancels the current generation and keeps your prompt and options")
+            } else {
+                Button {
+                    requestGeneration()
+                } label: {
+                    Label("Generate Artwork", systemImage: "sparkles")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canRequestGeneration)
+                .accessibilityHint("Generates artwork from the current prompt and settings")
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .background(.bar)
+        .overlay(alignment: .top) {
+            Divider()
+        }
+    }
+
+    private var canRequestGeneration: Bool {
+        let prompt = model.draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !model.isGenerating && !prompt.isEmpty && prompt.count <= 1000
+    }
+
+    private func requestGeneration() {
+        promptFocused = false
+        model.requestGeneration()
     }
 
     private var resultsColumn: some View {
@@ -624,9 +689,9 @@ struct CreateView: View {
                         icon: "sparkles",
                         isGenerating: model.isGenerating
                     ) {
-                        model.requestGeneration()
+                        requestGeneration()
                     }
-                    .disabled(model.isGenerating || model.draft.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!canRequestGeneration)
                     .padding(.top, 6)
                 }
             }

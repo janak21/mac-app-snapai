@@ -26,8 +26,8 @@ struct ResultsView: View {
             HStack(alignment: .center, spacing: 16) {
                 PageHeader(
                     eyebrow: "RESULTS GALLERY",
-                    title: "Generated Masterpieces",
-                    subtitle: "Compare, inspect, and export artwork created during your session."
+                    title: "Results",
+                    subtitle: "Review, compare, and export the images you create."
                 )
 
                 Spacer()
@@ -60,13 +60,13 @@ struct ResultsView: View {
                 VStack(spacing: 24) {
                     EmptySectionView(
                         section: .library,
-                        description: "Your generated variations will appear here in a high-resolution comparison grid.",
-                        actionTitle: "Start Creating Artwork",
+                        description: "Your images will appear here after you generate them.",
+                        actionTitle: "Create an image",
                         action: { model.selectSection(.create) }
                     )
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Creative Inspiration Starters")
+                        Text("Start with an idea")
                             .font(.caption.weight(.bold))
                             .tracking(1.2)
                             .foregroundStyle(.secondary)
@@ -279,6 +279,10 @@ struct ResultsView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
+
+                Label("Use this prompt", systemImage: "arrow.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -289,7 +293,8 @@ struct ResultsView: View {
             }
         }
         .buttonStyle(DeckTileButtonStyle())
+        .accessibilityLabel("Use \(title) prompt")
+        .accessibilityHint("Opens Create with this prompt, style, and model selected.")
     }
 }
-
 

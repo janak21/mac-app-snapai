@@ -112,7 +112,7 @@ struct ProfilesView: View {
 
     private func profileCard(_ profile: StoredProfile) -> some View {
         SurfaceCard {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -123,46 +123,54 @@ struct ProfilesView: View {
                             .foregroundStyle(Color.accentColor)
                     }
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Text(profile.name)
-                                .font(.headline.weight(.bold))
-                                .lineLimit(1)
-                            Spacer()
-                            Text(profile.draft.style.isEmpty ? profile.draft.model : profile.draft.style)
-                                .font(.system(size: 9, weight: .bold))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.purple.opacity(0.15), in: Capsule())
-                                .foregroundStyle(Color.purple)
-                        }
-                        Text(profile.detail)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(profile.name)
+                            .font(.headline.weight(.semibold))
+                            .lineLimit(1)
+                            .accessibilityAddTraits(.isHeader)
+
+                        Text(profile.draft.style.isEmpty ? profile.draft.model : profile.draft.style)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
+
                 }
+
+                Text(profile.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
 
                 if let prompt = profile.prompt, !prompt.isEmpty {
-                    Text(prompt)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .padding(8)
-                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Prompt", systemImage: "text.quote")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.tertiary)
+
+                        Text(prompt)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
 
-                HStack(spacing: 8) {
+                HStack {
                     Button {
                         model.activateProfile(profile)
                     } label: {
-                        Label("Reuse Profile", systemImage: "arrow.clockwise.circle.fill")
+                        Label("Reuse", systemImage: "arrow.clockwise.circle.fill")
                             .font(.caption.weight(.semibold))
                     }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .accessibilityLabel("Reuse \(profile.name) profile")
+                    .accessibilityHint("Applies this profile's saved settings")
 
                     Spacer()
-
                     Menu {
                         Button("Edit Profile", systemImage: "pencil") {
                             profileToEdit = profile
@@ -176,10 +184,11 @@ struct ProfilesView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .font(.title3)
+                            .font(.body)
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("More actions for \(profile.name)")
                 }
             }
         }
