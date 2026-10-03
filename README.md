@@ -4,12 +4,18 @@ SnapAI is a local-first image-generation tool for app artwork and visual directi
 
 ## What is included
 
-- **Native macOS app** — guided setup, secure provider credentials, prompt templates, model selection, prompt preview, output-folder control, generation results, profiles, history, Quick Look, and Finder actions.
+- **Native macOS app** — guided setup, secure provider credentials, prompt templates, model selection, prompt preview, output-folder control, generation results, profiles, history, Quick Look, and Finder actions. The Create workspace has one primary **Generate** action in the prompt composer.
 - **`icon` CLI** — scripting-friendly image generation.
 - **`ui` browser UI** — local prompts, previews, generation, profiles, and history.
 - **`studio` terminal workflow** — interactive prompts, profiles, confirmations, reruns, and history.
 
 The macOS app and browser UI use the same local TypeScript core, so prompt and generation behavior stays consistent across surfaces.
+
+## Upstream project and attribution
+
+This repository is based on [SnapAI by Code with Beto](https://github.com/betomoedano/snapai). The original project provides the TypeScript generation core, CLI, browser UI, and prompt-generation foundations. This repository extends that work with the native SwiftUI macOS app and its packaging workflow.
+
+The upstream project is licensed under the MIT License. Its copyright notice is preserved in [LICENSE](LICENSE).
 
 ## Requirements
 
@@ -56,7 +62,7 @@ SNAPAI_CORE_ROOT="$PWD" \
 
 1. Continue through the welcome screen.
 2. Save an OpenAI key or optionally configure Google Gemini. Keys are stored in macOS Keychain.
-3. Choose the folder where generated files should be saved.
+3. Choose the default folder where generated files should be saved.
 4. Select **Start creating**.
 5. Enter a prompt, choose a model and options, then select **Generate**.
 
@@ -70,10 +76,34 @@ From **Create**, you can:
 - Preview the resolved prompt before making a provider request.
 - Choose among the available OpenAI and Gemini image models.
 - Adjust quality, variations, background, output format, style, and filename options where supported.
-- Save results as square image files in the selected folder.
+- Select **Generate** in the prompt composer to start a request. While it runs, the button shows its active generation state; use the request status card to cancel or retry.
+- Save results as square image files in the selected folder. You can set a different folder for an individual run without changing the default.
 - Inspect results in the app, open or reveal them in Finder, use Quick Look, copy paths, and drag result files into other Mac apps.
 
 The sidebar also provides **Results**, **History**, **Profiles**, and **Settings**. Profiles save reusable prompt options; history stores generation metadata and output paths without storing provider credentials.
+
+### Build a distributable DMG
+
+The repository also includes Apple Silicon (macOS 14+) release tooling that Developer ID-signs, notarizes, and staples a drag-to-install DMG. You need a paid Apple Developer membership, a **Developer ID Application** certificate, and an App Store Connect API key with permission to use the notarization service.
+
+Store notarization credentials in your keychain once per signing machine:
+
+```bash
+cd macos/SnapAIApp
+SNAPAI_NOTARY_KEY_ID=<key-id> \
+SNAPAI_NOTARY_ISSUER=<issuer-id> \
+SNAPAI_NOTARY_KEY_PATH=<path-to-AuthKey.p8> \
+  ./setup-notary.sh
+```
+
+Then create the release image:
+
+```bash
+SNAPAI_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+  ./make-dmg.sh
+```
+
+The final file is `macos/SnapAIApp/SnapAI-<version>.dmg`. For detailed prerequisites and release-script options, see [the macOS app README](macos/SnapAIApp/README.md).
 
 ### Native app models
 
