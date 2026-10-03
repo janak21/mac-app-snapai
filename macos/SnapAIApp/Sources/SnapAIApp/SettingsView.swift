@@ -123,7 +123,7 @@ struct SettingsView: View {
                 HStack(spacing: 8) {
                     Text(title)
                         .font(.headline)
-                    if isConfigured && !isReplacing.wrappedValue {
+                    if isConfigured {
                         Label("Configured in Keychain", systemImage: "checkmark.circle.fill")
                             .font(.caption)
                             .foregroundStyle(.green)
@@ -144,6 +144,12 @@ struct SettingsView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: 360)
                         .accessibilityLabel(isConfigured ? "Replacement \(title) API key" : "\(title) API key")
+
+                    if isConfigured {
+                        Text("Your existing key remains active until you save the replacement.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             Spacer()
