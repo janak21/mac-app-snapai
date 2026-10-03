@@ -2,6 +2,8 @@
 
 SnapAI is a local-first image-generation tool for app artwork and visual directions. It supports OpenAI and Google Gemini through a shared TypeScript generation core, with three developer entry points and a native SwiftUI macOS app.
 
+![The SnapAI macOS app: writing a prompt, picking a model, browsing results and history, and the Keychain-backed settings](docs/snapai-demo.gif)
+
 ## What is included
 
 - **Native macOS app** — guided setup, secure provider credentials, prompt templates, model selection, prompt preview, output-folder control, generation results, profiles, history, Quick Look, and Finder actions. The Create workspace has one primary **Generate** action in the prompt composer.
